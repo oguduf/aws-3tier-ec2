@@ -1,0 +1,61 @@
+name: Application Infrastructure Terraform
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to manage
+        required: true
+        type: choice
+        options: [dev, test, production]
+      operation:
+        description: Terraform operation
+        required: true
+        type: choice
+        options: [plan, apply, destroy]
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: infrastructure-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    defaults:
+      run:
+        working-directory: infra/application
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Initialize remote state
+        run: |
+          terraform init -reconfigure -input=false \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="key=application/${{ inputs.environment }}/terraform.tfstate" \
+            -backend-config="region=${{ vars.AWS_REGION }}" \
+            -backend-config="encrypt=true" \
+            -backend-config="use_lockfile=true"
+      - name: Format check
+        run: terraform fmt -check -recursive
+      - name: Validate
+        run: terraform validate -no-color
+      - name: Plan
+        if: inputs.operation == 'plan'
+        run: terraform plan -no-color -input=false -var="state_bucket_name=${{ vars.TF_STATE_BUCKET }}" -var-file="environments/${{ inputs.environment }}.tfvars"
+      - name: Apply
+        if: inputs.operation == 'apply'
+        run: terraform apply -auto-approve -input=false -var="state_bucket_name=${{ vars.TF_STATE_BUCKET }}" -var-file="environments/${{ inputs.environment }}.tfvars"
+      - name: Destroy
+        if: inputs.operation == 'destroy'
+        run: terraform destroy -auto-approve -input=false -var="state_bucket_name=${{ vars.TF_STATE_BUCKET }}" -var-file="environments/${{ inputs.environment }}.tfvars"

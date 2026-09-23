@@ -1,5 +1,7 @@
 terraform {
-  required_version = ">= 1.6.0"
+  required_version = ">= 1.10.0"
+
+  backend "s3" {}
 
   required_providers {
     aws = {
@@ -10,11 +12,24 @@ terraform {
 }
 
 provider "aws" {
-  region = "us-east-2"
+  region = var.aws_region
 }
 
 resource "aws_s3_bucket" "terraform_state" {
-  bucket = "omer-aws-3tier-tf.state"
+  bucket = var.state_bucket_name
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  tags = {
+    Name    = var.state_bucket_name
+    Project = "aws-3tier-ec2"
+  }
+}
+
+output "state_bucket_name" {
+  value = aws_s3_bucket.terraform_state.id
 }
 
 resource "aws_s3_bucket_versioning" "terraform_state" {

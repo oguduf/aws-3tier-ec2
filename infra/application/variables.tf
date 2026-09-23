@@ -7,19 +7,17 @@ variable "project_name" {
 variable "environment" {
   description = "Deployment environment"
   type        = string
-  default     = "dev"
+
+  validation {
+    condition     = contains(["dev", "test", "production"], var.environment)
+    error_message = "Environment must be dev, test, or production."
+  }
 }
 
 variable "aws_region" {
   description = "AWS region where resources will be created"
   type        = string
   default     = "us-east-2"
-}
-
-variable "vpc_cidr" {
-  description = "IP address range for the VPC"
-  type        = string
-  default     = "10.0.0.0/16"
 }
 
 variable "db_name" {
@@ -32,12 +30,6 @@ variable "db_username" {
   description = "Username the application uses to connect to MySQL"
   type        = string
   default     = "task_app"
-}
-
-variable "db_password" {
-  description = "Password the application uses to connect to MySQL"
-  type        = string
-  sensitive   = true
 }
 
 variable "instance_type" {
@@ -63,3 +55,10 @@ variable "app_desired_capacity" {
   type        = number
   default     = 1
 }
+
+variable "database_multi_az" {
+  description = "Whether RDS has a synchronous standby in another Availability Zone"
+  type        = bool
+  default     = false
+}
+

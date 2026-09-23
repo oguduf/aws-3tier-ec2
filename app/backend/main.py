@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from typing import Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Response, status
@@ -10,14 +11,17 @@ from database import Base, engine, get_db
 from models import Task
 
 
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    Base.metadata.create_all(bind=engine)
+    yield
+
+
 app = FastAPI(
     title="Task Manager API",
-    version="0.1.0"
+    version="0.1.0",
+    lifespan=lifespan,
 )
-
-@app.on_event("startup")
-def create_database_tables():
-    Base.metadata.create_all(bind=engine)
 
 app.add_middleware(
     CORSMiddleware,

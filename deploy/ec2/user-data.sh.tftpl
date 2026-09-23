@@ -1,0 +1,68 @@
+#!/bin/bash
+set -euxo pipefail
+
+dnf update -y
+dnf install -y docker jq awscli
+
+systemctl enable docker
+systemctl start docker
+
+mkdir -p /opt/task-manager
+cd /opt/task-manager
+
+aws ecr get-login-password --region "${aws_region}" \
+  | docker login --username AWS --password-stdin "${ecr_registry}"
+
+SECRET_JSON=$(aws secretsmanager get-secret-value \
+  --secret-id "${database_secret_arn}" \
+  --query SecretString \
+  --output text \
+  --region "${aws_region}")
+
+cat > .env <<EOF
+FRONTEND_IMAGE=${frontend_image}:${image_tag}
+BACKEND_IMAGE=${backend_image}:${image_tag}
+DATABASE_HOST=$(echo "$SECRET_JSON" | jq -r .host)
+DATABASE_NAME=${database_name}
+DATABASE_USER=$(echo "$SECRET_JSON" | jq -r .username)
+DATABASE_PASSWORD=$(echo "$SECRET_JSON" | jq -r .password)
+EOF
+
+cat > docker-compose.yml <<'EOF'
+services:
+  frontend:
+    image: $${FRONTEND_IMAGE}
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: "${aws_region}"
+        awslogs-group: "${application_log_group}"
+        awslogs-stream: frontend
+
+  backend:
+    image: $${BACKEND_IMAGE}
+    environment:
+      DATABASE_HOST: $${DATABASE_HOST}
+      DATABASE_PORT: 3306
+      DATABASE_NAME: $${DATABASE_NAME}
+      DATABASE_USER: $${DATABASE_USER}
+      DATABASE_PASSWORD: $${DATABASE_PASSWORD}
+    restart: unless-stopped
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: "${aws_region}"
+        awslogs-group: "${application_log_group}"
+        awslogs-stream: backend
+EOF
+
+until docker compose pull; do
+  echo "Waiting for application images to be published..."
+  sleep 30
+done
+docker compose up -d

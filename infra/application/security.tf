@@ -1,7 +1,7 @@
 resource "aws_security_group" "alb" {
   name        = "${var.project_name}-${var.environment}-alb-sg"
   description = "Allows web traffic to the load balancer"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = data.terraform_remote_state.network.outputs.vpc_id
 
   ingress {
     description = "HTTP from the internet"
@@ -29,7 +29,7 @@ resource "aws_security_group" "alb" {
 resource "aws_security_group" "app" {
   name        = "${var.project_name}-${var.environment}-app-sg"
   description = "Allows traffic from the load balancer to EC2 application servers"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = data.terraform_remote_state.network.outputs.vpc_id
 
   ingress {
     description     = "HTTP from the load balancer only"
@@ -57,7 +57,7 @@ resource "aws_security_group" "app" {
 resource "aws_security_group" "database" {
   name        = "${var.project_name}-${var.environment}-db-sg"
   description = "Allows MySQL traffic from application servers only"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = data.terraform_remote_state.network.outputs.vpc_id
 
   ingress {
     description     = "MySQL from application servers only"

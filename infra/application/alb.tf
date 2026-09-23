@@ -3,7 +3,7 @@ resource "aws_lb" "main" {
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb.id]
-  subnets            = aws_subnet.public[*].id
+  subnets            = data.terraform_remote_state.network.outputs.public_subnet_ids
 
   tags = {
     Name        = "${var.project_name}-${var.environment}-alb"
@@ -16,7 +16,7 @@ resource "aws_lb_target_group" "app" {
   name     = "${var.project_name}-${var.environment}-app-tg"
   port     = 80
   protocol = "HTTP"
-  vpc_id   = aws_vpc.main.id
+  vpc_id   = data.terraform_remote_state.network.outputs.vpc_id
 
   health_check {
     path                = "/"

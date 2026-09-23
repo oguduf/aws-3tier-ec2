@@ -1,0 +1,55 @@
+name: Build and Push Application Images
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment whose ECR repositories receive the images
+        required: true
+        type: choice
+        options: [dev, test, production]
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: application-images-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./app/frontend
+          file: ./app/frontend/Dockerfile.prod
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/aws-3tier-ec2/${{ inputs.environment }}/frontend:${{ github.sha }}
+            ${{ steps.login-ecr.outputs.registry }}/aws-3tier-ec2/${{ inputs.environment }}/frontend:${{ inputs.environment }}
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./app/backend
+          file: ./app/backend/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/aws-3tier-ec2/${{ inputs.environment }}/backend:${{ github.sha }}
+            ${{ steps.login-ecr.outputs.registry }}/aws-3tier-ec2/${{ inputs.environment }}/backend:${{ inputs.environment }}
+      - name: Refresh application servers
+        run: |
+          aws autoscaling start-instance-refresh \
+            --auto-scaling-group-name "aws-3tier-ec2-${{ inputs.environment }}-app-asg" \
+            --strategy Rolling \
+            --preferences '{"MinHealthyPercentage":100,"MaxHealthyPercentage":200,"InstanceWarmup":300}'
