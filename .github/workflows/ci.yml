@@ -1,0 +1,61 @@
+name: CI Checks
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  application:
+    name: Test application
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install frontend packages
+        working-directory: app/frontend
+        run: npm install
+      - name: Build frontend
+        working-directory: app/frontend
+        run: npm run build
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install backend packages
+        working-directory: app/backend
+        run: pip install -r requirements.txt
+      - name: Check Python files
+        working-directory: app/backend
+        run: python -m compileall .
+      - name: Run backend tests
+        working-directory: app/backend
+        run: python -m pytest
+
+  terraform:
+    name: Validate Terraform
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
+      - name: Check Terraform formatting
+        run: terraform fmt -check -recursive infra
+      - name: Validate bootstrap Terraform
+        run: |
+          terraform -chdir=infra/bootstrap init -backend=false -input=false
+          terraform -chdir=infra/bootstrap validate -no-color
+      - name: Validate network Terraform
+        run: |
+          terraform -chdir=infra/network init -backend=false -input=false
+          terraform -chdir=infra/network validate -no-color
+      - name: Validate application Terraform
+        run: |
+          terraform -chdir=infra/application init -backend=false -input=false
+          terraform -chdir=infra/application validate -no-color

@@ -1,0 +1,29 @@
+output "database_endpoint" {
+  description = "MySQL database address for the application"
+  value       = aws_db_instance.main.address
+}
+
+output "frontend_ecr_repository_url" {
+  description = "ECR address for the frontend Docker image"
+  value       = aws_ecr_repository.frontend.repository_url
+}
+
+output "backend_ecr_repository_url" {
+  description = "ECR address for the backend Docker image"
+  value       = aws_ecr_repository.backend.repository_url
+}
+
+output "database_secret_arn" {
+  description = "AWS Secrets Manager ARN containing the RDS credentials"
+  value       = aws_db_instance.main.master_user_secret[0].secret_arn
+}
+
+output "load_balancer_dns_name" {
+  description = "Public address of the Task Manager website"
+  value       = aws_lb.main.dns_name
+}
+
+output "auto_scaling_group_name" {
+  description = "Auto Scaling Group that runs the application servers"
+  value       = aws_autoscaling_group.app.name
+}

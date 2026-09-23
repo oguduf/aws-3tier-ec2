@@ -1,0 +1,79 @@
+name: Security
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  secrets:
+    name: Gitleaks secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  infrastructure:
+    name: Checkov infrastructure scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: infra
+          framework: terraform
+          quiet: true
+
+  filesystem:
+    name: Trivy code and configuration scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: 1
+
+  containers:
+    name: Trivy container image scans
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build frontend production image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./app/frontend
+          file: ./app/frontend/Dockerfile.prod
+          load: true
+          tags: task-manager-frontend:security
+      - name: Scan frontend image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: task-manager-frontend:security
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: 1
+      - name: Build backend production image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./app/backend
+          file: ./app/backend/Dockerfile
+          load: true
+          tags: task-manager-backend:security
+      - name: Scan backend image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: task-manager-backend:security
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: 1
