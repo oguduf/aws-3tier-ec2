@@ -86,6 +86,20 @@ resource "aws_security_group" "private_endpoints" {
   vpc_id      = data.terraform_remote_state.network.outputs.vpc_id
 }
 
+data "aws_prefix_list" "s3" {
+  name = "com.amazonaws.${var.aws_region}.s3"
+}
+
+resource "aws_security_group_rule" "app_to_s3" {
+  type              = "egress"
+  description       = "HTTPS to Amazon S3 through the VPC gateway endpoint"
+  from_port         = 443
+  to_port           = 443
+  protocol          = "tcp"
+  security_group_id = aws_security_group.app.id
+  prefix_list_ids   = [data.aws_prefix_list.s3.id]
+}
+
 resource "aws_security_group" "database" {
   name        = "${var.project_name}-${var.environment}-db-sg"
   description = "Allows MySQL traffic from application servers only"
