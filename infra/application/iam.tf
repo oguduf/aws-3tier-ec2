@@ -76,6 +76,23 @@ resource "aws_iam_role_policy" "ec2_read_image_parameters" {
   })
 }
 
+resource "aws_iam_role_policy" "ec2_decrypt_application_key" {
+  name = "${var.project_name}-${var.environment}-decrypt-application-key"
+  role = aws_iam_role.ec2.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "kms:Decrypt",
+        "kms:DescribeKey"
+      ]
+      Resource = aws_kms_key.application.arn
+    }]
+  })
+}
+
 resource "aws_iam_role" "rds_monitoring" {
   name = "${var.project_name}-${var.environment}-rds-monitoring"
 
