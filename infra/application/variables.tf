@@ -62,12 +62,19 @@ variable "database_multi_az" {
   default     = false
 }
 
+variable "enable_https" {
+  description = "Whether the public load balancer should expose HTTPS"
+  type        = bool
+  default     = true
+}
+
 variable "certificate_arn" {
   description = "ACM certificate ARN used by the public HTTPS listener"
   type        = string
+  default     = ""
 
   validation {
-    condition     = length(var.certificate_arn) > 0
+    condition     = !var.enable_https || length(var.certificate_arn) > 0
     error_message = "Set certificate_arn to a valid ACM certificate ARN before planning or applying."
   }
 }
