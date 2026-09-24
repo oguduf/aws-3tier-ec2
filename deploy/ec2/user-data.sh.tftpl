@@ -13,56 +13,51 @@ cd /opt/task-manager
 aws ecr get-login-password --region "${aws_region}" \
   | docker login --username AWS --password-stdin "${ecr_registry}"
 
+set +x
 SECRET_JSON=$(aws secretsmanager get-secret-value \
   --secret-id "${database_secret_arn}" \
   --query SecretString \
   --output text \
   --region "${aws_region}")
 
-cat > .env <<EOF
 FRONTEND_IMAGE=$(aws ssm get-parameter --name "${frontend_parameter}" --with-decryption --query Parameter.Value --output text --region "${aws_region}")
 BACKEND_IMAGE=$(aws ssm get-parameter --name "${backend_parameter}" --with-decryption --query Parameter.Value --output text --region "${aws_region}")
 DATABASE_HOST=$(echo "$SECRET_JSON" | jq -r .host)
-DATABASE_NAME=${database_name}
+DATABASE_NAME="${database_name}"
 DATABASE_USER=$(echo "$SECRET_JSON" | jq -r .username)
 DATABASE_PASSWORD=$(echo "$SECRET_JSON" | jq -r .password)
-EOF
+set -x
 
-cat > docker-compose.yml <<'EOF'
-services:
-  frontend:
-    image: $${FRONTEND_IMAGE}
-    ports:
-      - "80:8080"
-    depends_on:
-      - backend
-    restart: unless-stopped
-    logging:
-      driver: awslogs
-      options:
-        awslogs-region: "${aws_region}"
-        awslogs-group: "${application_log_group}"
-        awslogs-stream: frontend
-
-  backend:
-    image: $${BACKEND_IMAGE}
-    environment:
-      DATABASE_HOST: $${DATABASE_HOST}
-      DATABASE_PORT: 3306
-      DATABASE_NAME: $${DATABASE_NAME}
-      DATABASE_USER: $${DATABASE_USER}
-      DATABASE_PASSWORD: $${DATABASE_PASSWORD}
-    restart: unless-stopped
-    logging:
-      driver: awslogs
-      options:
-        awslogs-region: "${aws_region}"
-        awslogs-group: "${application_log_group}"
-        awslogs-stream: backend
-EOF
-
-until docker compose pull; do
+until docker pull "$BACKEND_IMAGE" && docker pull "$FRONTEND_IMAGE"; do
   echo "Waiting for application images to be published..."
   sleep 30
 done
-docker compose up -d
+
+docker network create task-manager >/dev/null 2>&1 || true
+docker rm -f backend frontend >/dev/null 2>&1 || true
+
+docker run -d \
+  --name backend \
+  --network task-manager \
+  --restart unless-stopped \
+  --log-driver awslogs \
+  --log-opt awslogs-region="${aws_region}" \
+  --log-opt awslogs-group="${application_log_group}" \
+  --log-opt awslogs-stream=backend \
+  -e DATABASE_HOST="$DATABASE_HOST" \
+  -e DATABASE_PORT=3306 \
+  -e DATABASE_NAME="$DATABASE_NAME" \
+  -e DATABASE_USER="$DATABASE_USER" \
+  -e DATABASE_PASSWORD="$DATABASE_PASSWORD" \
+  "$BACKEND_IMAGE"
+
+docker run -d \
+  --name frontend \
+  --network task-manager \
+  --restart unless-stopped \
+  --log-driver awslogs \
+  --log-opt awslogs-region="${aws_region}" \
+  --log-opt awslogs-group="${application_log_group}" \
+  --log-opt awslogs-stream=frontend \
+  -p 80:8080 \
+  "$FRONTEND_IMAGE"
