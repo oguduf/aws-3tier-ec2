@@ -47,8 +47,8 @@ jobs:
             ${{ steps.login-ecr.outputs.registry }}/aws-3tier-ec2/${{ inputs.environment }}/backend:${{ github.sha }}
       - name: Set approved immutable image versions
         run: |
-          aws ssm put-parameter --name "/aws-3tier-ec2/${{ inputs.environment }}/frontend-image" --type SecureString --value "${{ steps.login-ecr.outputs.registry }}/aws-3tier-ec2/${{ inputs.environment }}/frontend:${{ github.sha }}" --overwrite
-          aws ssm put-parameter --name "/aws-3tier-ec2/${{ inputs.environment }}/backend-image" --type SecureString --value "${{ steps.login-ecr.outputs.registry }}/aws-3tier-ec2/${{ inputs.environment }}/backend:${{ github.sha }}" --overwrite
+          aws ssm put-parameter --name "/task-manager/${{ inputs.environment }}/frontend-image" --type SecureString --value "${{ steps.login-ecr.outputs.registry }}/aws-3tier-ec2/${{ inputs.environment }}/frontend:${{ github.sha }}" --overwrite
+          aws ssm put-parameter --name "/task-manager/${{ inputs.environment }}/backend-image" --type SecureString --value "${{ steps.login-ecr.outputs.registry }}/aws-3tier-ec2/${{ inputs.environment }}/backend:${{ github.sha }}" --overwrite
       - name: Refresh application servers
         run: |
           aws autoscaling start-instance-refresh \
