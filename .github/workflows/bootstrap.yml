@@ -55,7 +55,10 @@ jobs:
             -backend-config="encrypt=true" \
             -backend-config="use_lockfile=true"
           if [ -z "${{ vars.TF_STATE_BUCKET }}" ]; then
-            terraform import -input=false aws_s3_bucket.terraform_state "${{ inputs.state_bucket_name }}"
+            terraform import -input=false \
+              -var="state_bucket_name=${{ inputs.state_bucket_name }}" \
+              -var="aws_region=${{ vars.AWS_REGION }}" \
+              aws_s3_bucket.terraform_state "${{ inputs.state_bucket_name }}"
           fi
       - name: Plan state bucket
         if: inputs.operation == 'plan'
