@@ -46,7 +46,6 @@ jobs:
           fi
 
       - name: Initialize Terraform against the state bucket
-        if: vars.TF_STATE_BUCKET == ''
         working-directory: infra/bootstrap
         run: |
           terraform init -reconfigure -input=false \
@@ -55,17 +54,9 @@ jobs:
             -backend-config="region=${{ vars.AWS_REGION }}" \
             -backend-config="encrypt=true" \
             -backend-config="use_lockfile=true"
-          terraform import -input=false aws_s3_bucket.terraform_state "${{ inputs.state_bucket_name }}"
-      - name: Initialize Terraform from remote state
-        if: vars.TF_STATE_BUCKET != ''
-        working-directory: infra/bootstrap
-        run: |
-          terraform init -reconfigure -input=false \
-            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
-            -backend-config="key=bootstrap/terraform.tfstate" \
-            -backend-config="region=${{ vars.AWS_REGION }}" \
-            -backend-config="encrypt=true" \
-            -backend-config="use_lockfile=true"
+          if [ -z "${{ vars.TF_STATE_BUCKET }}" ]; then
+            terraform import -input=false aws_s3_bucket.terraform_state "${{ inputs.state_bucket_name }}"
+          fi
       - name: Plan state bucket
         if: inputs.operation == 'plan'
         working-directory: infra/bootstrap
