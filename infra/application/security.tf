@@ -120,3 +120,13 @@ resource "aws_security_group" "database" {
   }
 }
 
+resource "aws_security_group_rule" "app_to_database" {
+  type                     = "egress"
+  description              = "MySQL from application servers to the database"
+  from_port                = 3306
+  to_port                  = 3306
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.app.id
+  source_security_group_id = aws_security_group.database.id
+}
+
