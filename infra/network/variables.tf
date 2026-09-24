@@ -20,3 +20,8 @@ variable "aws_region" {
 variable "vpc_cidr" {
   type = string
 }
+
+variable "availability_zones" {
+  description = "Exactly two availability zones used by this environment"
+  type        = list(string)
+}

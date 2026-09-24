@@ -35,10 +35,27 @@ jobs:
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
-      - name: Initialize Terraform for first state-bucket creation
+      - name: Create the empty state bucket for first bootstrap
+        if: vars.TF_STATE_BUCKET == ''
+        run: |
+          if ! aws s3api head-bucket --bucket "${{ inputs.state_bucket_name }}" 2>/dev/null; then
+            aws s3api create-bucket \
+              --bucket "${{ inputs.state_bucket_name }}" \
+              --region "${{ vars.AWS_REGION }}" \
+              --create-bucket-configuration LocationConstraint="${{ vars.AWS_REGION }}"
+          fi
+
+      - name: Initialize Terraform against the state bucket
         if: vars.TF_STATE_BUCKET == ''
         working-directory: infra/bootstrap
-        run: terraform init -backend=false -input=false
+        run: |
+          terraform init -reconfigure -input=false \
+            -backend-config="bucket=${{ inputs.state_bucket_name }}" \
+            -backend-config="key=bootstrap/terraform.tfstate" \
+            -backend-config="region=${{ vars.AWS_REGION }}" \
+            -backend-config="encrypt=true" \
+            -backend-config="use_lockfile=true"
+          terraform import -input=false aws_s3_bucket.terraform_state "${{ inputs.state_bucket_name }}"
       - name: Initialize Terraform from remote state
         if: vars.TF_STATE_BUCKET != ''
         working-directory: infra/bootstrap
@@ -57,16 +74,6 @@ jobs:
         if: inputs.operation == 'apply'
         working-directory: infra/bootstrap
         run: terraform apply -auto-approve -input=false -var="state_bucket_name=${{ inputs.state_bucket_name }}" -var="aws_region=${{ vars.AWS_REGION }}"
-      - name: Migrate bootstrap state into S3
-        if: inputs.operation == 'apply' && vars.TF_STATE_BUCKET == ''
-        working-directory: infra/bootstrap
-        run: |
-          terraform init -migrate-state -force-copy -reconfigure -input=false \
-            -backend-config="bucket=${{ inputs.state_bucket_name }}" \
-            -backend-config="key=bootstrap/terraform.tfstate" \
-            -backend-config="region=${{ vars.AWS_REGION }}" \
-            -backend-config="encrypt=true" \
-            -backend-config="use_lockfile=true"
       - name: Store state bucket name in GitHub Variables
         if: inputs.operation == 'apply'
         uses: actions/github-script@v7

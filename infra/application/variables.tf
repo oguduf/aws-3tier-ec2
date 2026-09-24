@@ -62,3 +62,13 @@ variable "database_multi_az" {
   default     = false
 }
 
+variable "certificate_arn" {
+  description = "ACM certificate ARN used by the public HTTPS listener"
+  type        = string
+
+  validation {
+    condition     = length(var.certificate_arn) > 0
+    error_message = "Set certificate_arn to a valid ACM certificate ARN before planning or applying."
+  }
+}
+

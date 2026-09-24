@@ -19,3 +19,7 @@ resource "aws_internet_gateway" "main" {
     Environment = var.environment
   }
 }
+
+resource "aws_default_security_group" "restricted" {
+  vpc_id = aws_vpc.main.id
+}

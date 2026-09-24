@@ -55,12 +55,13 @@ Create these repository variables under **Settings -> Secrets and variables -> A
 | --- | --- | --- |
 | `AWS_REGION` | `us-east-2` | Region used by every workflow |
 | `AWS_ROLE_ARN` | `arn:aws:iam::123456789012:role/GitHubActionsRole` | One AWS OIDC deployment role |
+| `ACM_CERTIFICATE_ARN` | `arn:aws:acm:us-east-2:123456789012:certificate/...` | HTTPS certificate for the public load balancer |
 
 `TF_STATE_BUCKET` is created automatically after the bootstrap workflow applies successfully.
 
 Create GitHub environments named `dev`, `test`, and `production`. Add required reviewers to `production` so production jobs pause for approval.
 
-The AWS role trust policy must allow this repository to use GitHub OIDC. Its AWS permissions must cover the resources managed by these Terraform files, ECR image pushes, and Auto Scaling instance refreshes. No AWS access keys are stored in GitHub.
+Before applying application infrastructure, request or import an ACM certificate for your domain in `AWS_REGION`, validate it, and save its ARN as `ACM_CERTIFICATE_ARN`. The AWS role trust policy must allow this repository to use GitHub OIDC. Its AWS permissions must cover the resources managed by these Terraform files, ECR image pushes, SSM Parameter Store updates, and Auto Scaling instance refreshes. No AWS access keys are stored in GitHub.
 
 The trust-policy condition should be repository-scoped so it works for the bootstrap job and all three GitHub environments. Replace the account and repository values with yours:
 

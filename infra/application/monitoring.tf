@@ -1,6 +1,7 @@
 resource "aws_cloudwatch_log_group" "application" {
   name              = "/aws/ec2/${var.project_name}-${var.environment}/application"
-  retention_in_days = 30
+  retention_in_days = 365
+  kms_key_id        = aws_kms_key.application.arn
 }
 
 resource "aws_cloudwatch_metric_alarm" "unhealthy_targets" {

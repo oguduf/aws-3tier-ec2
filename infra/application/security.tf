@@ -4,18 +4,19 @@ resource "aws_security_group" "alb" {
   vpc_id      = data.terraform_remote_state.network.outputs.vpc_id
 
   ingress {
-    description = "HTTP from the internet"
+    #checkov:skip=CKV_AWS_260: Port 80 only redirects visitors to HTTPS.
+    description = "HTTP redirect from the internet"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  egress {
-    description = "Outbound traffic"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+  ingress {
+    description = "HTTPS from the internet"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
@@ -31,20 +32,12 @@ resource "aws_security_group" "app" {
   description = "Allows traffic from the load balancer to EC2 application servers"
   vpc_id      = data.terraform_remote_state.network.outputs.vpc_id
 
-  ingress {
-    description     = "HTTP from the load balancer only"
-    from_port       = 80
-    to_port         = 80
-    protocol        = "tcp"
-    security_groups = [aws_security_group.alb.id]
-  }
-
   egress {
-    description = "Outbound traffic"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    description     = "HTTPS to approved AWS private endpoints"
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    security_groups = [aws_security_group.private_endpoints.id]
   }
 
   tags = {
@@ -52,6 +45,42 @@ resource "aws_security_group" "app" {
     Project     = var.project_name
     Environment = var.environment
   }
+}
+
+resource "aws_security_group_rule" "alb_to_app" {
+  type                     = "egress"
+  description              = "HTTP to application servers"
+  from_port                = 80
+  to_port                  = 80
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.alb.id
+  source_security_group_id = aws_security_group.app.id
+}
+
+resource "aws_security_group_rule" "app_from_alb" {
+  type                     = "ingress"
+  description              = "HTTP from the load balancer only"
+  from_port                = 80
+  to_port                  = 80
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.app.id
+  source_security_group_id = aws_security_group.alb.id
+}
+
+resource "aws_security_group_rule" "app_to_private_endpoints" {
+  type                     = "ingress"
+  description              = "HTTPS from application servers"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.private_endpoints.id
+  source_security_group_id = aws_security_group.app.id
+}
+
+resource "aws_security_group" "private_endpoints" {
+  name        = "${var.project_name}-${var.environment}-endpoints-sg"
+  description = "Allows application servers to reach AWS private endpoints"
+  vpc_id      = data.terraform_remote_state.network.outputs.vpc_id
 }
 
 resource "aws_security_group" "database" {
