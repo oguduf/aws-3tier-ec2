@@ -32,6 +32,7 @@ resource "aws_launch_template" "app" {
       frontend_parameter    = aws_ssm_parameter.frontend_image.name
       backend_parameter     = aws_ssm_parameter.backend_image.name
       database_secret_arn   = aws_db_instance.main.master_user_secret[0].secret_arn
+      database_host         = aws_db_instance.main.address
       database_name         = var.db_name
       application_log_group = aws_cloudwatch_log_group.application.name
     }

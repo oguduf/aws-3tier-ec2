@@ -19,7 +19,7 @@ SECRET_JSON=$(aws secretsmanager get-secret-value \
   --output text \
   --region "${aws_region}")
 
-DATABASE_HOST=$(echo "$SECRET_JSON" | jq -r .host)
+DATABASE_HOST="${database_host}"
 DATABASE_NAME="${database_name}"
 DATABASE_USER=$(echo "$SECRET_JSON" | jq -r .username)
 DATABASE_PASSWORD=$(echo "$SECRET_JSON" | jq -r .password)
