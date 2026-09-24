@@ -58,3 +58,40 @@ resource "aws_iam_role_policy" "ec2_cloudwatch_logs" {
     }]
   })
 }
+
+resource "aws_iam_role_policy" "ec2_read_image_parameters" {
+  name = "${var.project_name}-${var.environment}-read-image-parameters"
+  role = aws_iam_role.ec2.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = ["ssm:GetParameter"]
+      Resource = [
+        aws_ssm_parameter.frontend_image.arn,
+        aws_ssm_parameter.backend_image.arn
+      ]
+    }]
+  })
+}
+
+resource "aws_iam_role" "rds_monitoring" {
+  name = "${var.project_name}-${var.environment}-rds-monitoring"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "monitoring.rds.amazonaws.com"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "rds_monitoring" {
+  role       = aws_iam_role.rds_monitoring.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"
+}
