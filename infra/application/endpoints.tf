@@ -4,11 +4,11 @@ locals {
     "ecr.dkr",
     "kms",
     "logs",
-  "secretsmanager",
-  "ssm",
-  "ssmmessages",
-  "ec2messages",
-])
+    "secretsmanager",
+    "ssm",
+    "ssmmessages",
+    "ec2messages",
+  ])
 }
 
 resource "aws_vpc_endpoint" "interface" {
