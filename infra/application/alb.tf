@@ -1,4 +1,4 @@
-#trivy:ignore:AVD-AWS-0053: This is the intentional public HTTPS entry point; application servers and database remain private.
+#trivy:ignore:AVD-AWS-0053: The public ALB is intentional; application servers and database remain private.
 resource "aws_lb" "main" {
   #checkov:skip=CKV_AWS_91: ALB access logging needs a dedicated log-delivery bucket; add it with the production logging account.
   #checkov:skip=CKV2_AWS_28: WAF is intentionally deferred because it has recurring cost; do not expose production before adding it.
@@ -18,7 +18,7 @@ resource "aws_lb" "main" {
 }
 
 resource "aws_lb_target_group" "app" {
-  #checkov:skip=CKV_AWS_378: TLS terminates at the ALB; ALB-to-private-EC2 traffic stays within the VPC.
+  #checkov:skip=CKV_AWS_378: HTTP is intentional inside the private VPC; HTTPS is optional at the public ALB.
   name     = "${var.project_name}-${var.environment}-app-tg"
   port     = 80
   protocol = "HTTP"
@@ -42,23 +42,28 @@ resource "aws_lb_target_group" "app" {
 }
 
 resource "aws_lb_listener" "http" {
-  #checkov:skip=CKV_AWS_2: This listener only redirects HTTP requests to HTTPS.
+  #checkov:skip=CKV_AWS_2: HTTP-only access is intentional for dev; test and production redirect to HTTPS.
   load_balancer_arn = aws_lb.main.arn
   port              = 80
   protocol          = "HTTP"
 
   default_action {
-    type = "redirect"
+    type             = var.enable_https ? "redirect" : "forward"
+    target_group_arn = var.enable_https ? null : aws_lb_target_group.app.arn
 
-    redirect {
-      port        = "443"
-      protocol    = "HTTPS"
-      status_code = "HTTP_301"
+    dynamic "redirect" {
+      for_each = var.enable_https ? [1] : []
+      content {
+        port        = "443"
+        protocol    = "HTTPS"
+        status_code = "HTTP_301"
+      }
     }
   }
 }
 
 resource "aws_lb_listener" "https" {
+  count             = var.enable_https ? 1 : 0
   load_balancer_arn = aws_lb.main.arn
   port              = 443
   protocol          = "HTTPS"

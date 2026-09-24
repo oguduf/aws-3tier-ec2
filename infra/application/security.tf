@@ -4,18 +4,10 @@ resource "aws_security_group" "alb" {
   vpc_id      = data.terraform_remote_state.network.outputs.vpc_id
 
   ingress {
-    #checkov:skip=CKV_AWS_260: Port 80 only redirects visitors to HTTPS.
-    description = "HTTP redirect from the internet"
+    #checkov:skip=CKV_AWS_260: HTTP-only access is intentional for dev; test and production redirect to HTTPS.
+    description = "HTTP from the internet"
     from_port   = 80
     to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    description = "HTTPS from the internet"
-    from_port   = 443
-    to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -55,6 +47,17 @@ resource "aws_security_group_rule" "alb_to_app" {
   protocol                 = "tcp"
   security_group_id        = aws_security_group.alb.id
   source_security_group_id = aws_security_group.app.id
+}
+
+resource "aws_security_group_rule" "alb_https" {
+  count             = var.enable_https ? 1 : 0
+  type              = "ingress"
+  description       = "HTTPS from the internet"
+  from_port         = 443
+  to_port           = 443
+  protocol          = "tcp"
+  security_group_id = aws_security_group.alb.id
+  cidr_blocks       = ["0.0.0.0/0"]
 }
 
 resource "aws_security_group_rule" "app_from_alb" {
