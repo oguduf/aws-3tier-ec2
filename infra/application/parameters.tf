@@ -3,6 +3,10 @@ resource "aws_ssm_parameter" "frontend_image" {
   type   = "SecureString"
   key_id = aws_kms_key.application.arn
   value  = "not-deployed"
+
+  lifecycle {
+    ignore_changes = [value]
+  }
 }
 
 resource "aws_ssm_parameter" "backend_image" {
@@ -10,4 +14,8 @@ resource "aws_ssm_parameter" "backend_image" {
   type   = "SecureString"
   key_id = aws_kms_key.application.arn
   value  = "not-deployed"
+
+  lifecycle {
+    ignore_changes = [value]
+  }
 }
