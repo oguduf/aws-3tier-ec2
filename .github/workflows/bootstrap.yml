@@ -25,6 +25,9 @@ concurrency:
 jobs:
   bootstrap:
     runs-on: ubuntu-latest
+    env:
+      TF_VAR_state_bucket_name: ${{ inputs.state_bucket_name }}
+      TF_VAR_aws_region: ${{ vars.AWS_REGION }}
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v4
