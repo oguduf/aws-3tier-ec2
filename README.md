@@ -65,7 +65,7 @@ Create these repository variables under **Settings -> Secrets and variables -> A
 
 Create GitHub environments named `dev`, `test`, and `production`. Add required reviewers to `production` so production jobs pause for approval.
 
-The `dev` environment is HTTP-only for this lab. `test` and `production` require HTTPS and a validated ACM certificate in `AWS_REGION`, provided through `ACM_CERTIFICATE_ARN`. The AWS role trust policy must allow this repository to use GitHub OIDC. Its AWS permissions must cover the resources managed by these Terraform files, ECR image pushes, SSM Parameter Store updates, and Auto Scaling instance refreshes. No AWS access keys are stored in GitHub.
+The ECS `dev` environment uses `omergroup.click`; the EC2 `dev` environment uses `ec2.omergroup.click`. Terraform requests and DNS-validates ACM certificates in `AWS_REGION`, creates HTTPS listeners, redirects HTTP to HTTPS, and creates Route 53 ALIAS records for both ALBs. `test` and `production` can use an existing ACM certificate through `ACM_CERTIFICATE_ARN` or the same Route 53 automation. The AWS role trust policy must allow this repository to use GitHub OIDC. Its AWS permissions must cover the resources managed by these Terraform files, ECR image pushes, SSM Parameter Store updates, and Auto Scaling instance refreshes. No AWS access keys are stored in GitHub.
 
 The trust-policy condition should be repository-scoped so it works for the bootstrap job and all three GitHub environments. Replace the account and repository values with yours:
 
@@ -116,11 +116,21 @@ RDS secret from Project 1.
 Deployment order:
 
 1. Run **Build and Push Application Images** for the environment. This creates the
-   normal backend image tag and the ECS-specific frontend image tag.
-2. Copy the commit SHA shown by that workflow.
-3. Run **ECS Fargate Terraform** with `apply`, the same environment, and that commit
-   SHA as `image_tag`.
-4. Open the ECS ALB DNS name from Terraform output.
+   immutable backend image and ECS-specific frontend image, then records their full
+   image URIs in AWS Systems Manager Parameter Store.
+2. Run **ECS Fargate Terraform** with `plan`, then `apply`, for the same environment.
+   The workflow automatically retrieves the approved immutable image URIs from
+   Parameter Store; no image SHA or Docker tag is entered manually.
+3. Open the `website_url` Terraform output when a custom domain is configured, or use
+   `load_balancer_dns_name` otherwise.
+
+### ECS HTTPS custom domain
+
+For a domain hosted in Route 53, set `domain_name` and `enable_https = true` in the
+environment tfvars file. The ECS Terraform stack creates the ACM public certificate,
+the DNS-validation CNAME, the HTTPS listener, the HTTP-to-HTTPS redirect, and the
+Route 53 ALIAS record. Keep the DNS-validation CNAME record so ACM can automatically
+renew the certificate.
 
 Before the first ECS apply, extend the GitHub OIDC deployment-role policy so
 `iam:PassRole` allows the ECS task roles to be passed to `ecs-tasks.amazonaws.com`.

@@ -68,14 +68,20 @@ variable "enable_https" {
   default     = true
 }
 
+variable "domain_name" {
+  description = "Base public domain managed in Route 53; the EC2 ALB uses the ec2 subdomain"
+  type        = string
+  default     = ""
+}
+
 variable "certificate_arn" {
-  description = "ACM certificate ARN used by the public HTTPS listener"
+  description = "Existing ACM certificate ARN. Leave empty when domain_name lets this stack create and validate a certificate."
   type        = string
   default     = ""
 
   validation {
-    condition     = !var.enable_https || length(var.certificate_arn) > 0
-    error_message = "Set certificate_arn to a valid ACM certificate ARN before planning or applying."
+    condition     = !var.enable_https || length(var.certificate_arn) > 0 || length(var.domain_name) > 0
+    error_message = "Set certificate_arn or domain_name when enable_https is true."
   }
 }
 
