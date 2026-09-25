@@ -1,5 +1,5 @@
+#trivy:ignore:AVD-AWS-0053: This is an intentional public ALB; Fargate tasks and RDS remain private.
 resource "aws_lb" "main" {
-  #trivy:ignore:AVD-AWS-0053: This is an intentional public ALB; Fargate tasks and RDS remain private.
   #checkov:skip=CKV_AWS_91: Access logging requires a dedicated log-delivery bucket and is a production follow-up.
   #checkov:skip=CKV2_AWS_28: WAF is deferred for the lab to avoid recurring cost.
   name                       = "${var.project_name}-${var.environment}-alb"
