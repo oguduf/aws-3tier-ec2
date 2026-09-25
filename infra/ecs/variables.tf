@@ -71,13 +71,19 @@ variable "enable_https" {
   default     = true
 }
 
+variable "domain_name" {
+  description = "Public DNS name managed in Route 53 for this ECS ALB, for example app.example.com"
+  type        = string
+  default     = ""
+}
+
 variable "certificate_arn" {
-  description = "ACM certificate ARN for the ECS ALB HTTPS listener"
+  description = "Existing ACM certificate ARN. Leave empty when domain_name lets this stack create and validate a certificate."
   type        = string
   default     = ""
 
   validation {
-    condition     = !var.enable_https || length(var.certificate_arn) > 0
-    error_message = "Set certificate_arn when enable_https is true."
+    condition     = !var.enable_https || length(var.certificate_arn) > 0 || length(var.domain_name) > 0
+    error_message = "Set certificate_arn or domain_name when enable_https is true."
   }
 }
