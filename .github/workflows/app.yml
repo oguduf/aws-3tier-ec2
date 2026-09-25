@@ -37,6 +37,14 @@ jobs:
           push: true
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/aws-3tier-ec2/${{ inputs.environment }}/frontend:${{ github.sha }}
+      - name: Build and push ECS frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./app/frontend
+          file: ./app/frontend/Dockerfile.ecs
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/aws-3tier-ec2/${{ inputs.environment }}/frontend:ecs-${{ github.sha }}
       - name: Build and push backend image
         uses: docker/build-push-action@v6
         with:

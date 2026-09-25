@@ -1,0 +1,65 @@
+name: ECS Fargate Terraform
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to manage
+        required: true
+        type: choice
+        options: [dev, test, production]
+      operation:
+        description: Terraform operation
+        required: true
+        type: choice
+        options: [plan, apply, destroy]
+      image_tag:
+        description: Immutable commit SHA built by Build and Push Application Images
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: ecs-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    defaults:
+      run:
+        working-directory: infra/ecs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Initialize remote state
+        run: |
+          terraform init -reconfigure -input=false \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="key=ecs/${{ inputs.environment }}/terraform.tfstate" \
+            -backend-config="region=${{ vars.AWS_REGION }}" \
+            -backend-config="encrypt=true" \
+            -backend-config="use_lockfile=true"
+      - name: Format check
+        run: terraform fmt -check -recursive
+      - name: Validate
+        run: terraform validate -no-color
+      - name: Plan
+        if: inputs.operation == 'plan'
+        run: terraform plan -no-color -input=false -var="state_bucket_name=${{ vars.TF_STATE_BUCKET }}" -var="certificate_arn=${{ vars.ACM_CERTIFICATE_ARN }}" -var="image_tag=${{ inputs.image_tag }}" -var-file="environments/${{ inputs.environment }}.tfvars"
+      - name: Apply
+        if: inputs.operation == 'apply'
+        run: terraform apply -auto-approve -input=false -var="state_bucket_name=${{ vars.TF_STATE_BUCKET }}" -var="certificate_arn=${{ vars.ACM_CERTIFICATE_ARN }}" -var="image_tag=${{ inputs.image_tag }}" -var-file="environments/${{ inputs.environment }}.tfvars"
+      - name: Destroy
+        if: inputs.operation == 'destroy'
+        run: terraform destroy -auto-approve -input=false -var="state_bucket_name=${{ vars.TF_STATE_BUCKET }}" -var="certificate_arn=${{ vars.ACM_CERTIFICATE_ARN }}" -var="image_tag=${{ inputs.image_tag }}" -var-file="environments/${{ inputs.environment }}.tfvars"

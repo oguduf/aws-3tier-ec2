@@ -27,3 +27,13 @@ output "auto_scaling_group_name" {
   description = "Auto Scaling Group that runs the application servers"
   value       = aws_autoscaling_group.app.name
 }
+
+output "private_endpoints_security_group_id" {
+  description = "Security group attached to the shared private AWS service endpoints"
+  value       = aws_security_group.private_endpoints.id
+}
+
+output "database_security_group_id" {
+  description = "Security group attached to the private RDS database"
+  value       = aws_security_group.database.id
+}
