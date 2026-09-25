@@ -19,7 +19,7 @@ resource "aws_ecs_task_definition" "application" {
   container_definitions = jsonencode([
     {
       name      = "backend"
-      image     = "${data.terraform_remote_state.application.outputs.backend_ecr_repository_url}:${var.image_tag}"
+      image     = var.backend_image
       essential = true
       cpu       = 384
       memory    = 512
@@ -50,7 +50,7 @@ resource "aws_ecs_task_definition" "application" {
     },
     {
       name      = "frontend"
-      image     = "${data.terraform_remote_state.application.outputs.frontend_ecr_repository_url}:ecs-${var.image_tag}"
+      image     = var.frontend_image
       essential = true
       cpu       = 128
       memory    = 256
