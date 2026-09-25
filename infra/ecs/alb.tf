@@ -18,6 +18,7 @@ resource "aws_lb" "main" {
 }
 
 resource "aws_lb_target_group" "frontend" {
+  #checkov:skip=CKV_AWS_378: The ALB terminates public HTTP in dev; the target group is private-only inside the VPC.
   name        = "${var.project_name}-${var.environment}-frontend"
   port        = 8080
   protocol    = "HTTP"
