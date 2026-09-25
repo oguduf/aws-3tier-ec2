@@ -49,8 +49,13 @@ jobs:
       - name: Read approved image versions
         id: images
         run: |
-          echo "backend=$(aws ssm get-parameter --name \"/task-manager/${{ inputs.environment }}/backend-image\" --with-decryption --query Parameter.Value --output text)" >> "$GITHUB_OUTPUT"
-          echo "frontend=$(aws ssm get-parameter --name \"/task-manager/${{ inputs.environment }}/ecs-frontend-image\" --with-decryption --query Parameter.Value --output text)" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          backend_image="$(aws ssm get-parameter --name "/task-manager/${{ inputs.environment }}/backend-image" --with-decryption --query Parameter.Value --output text)"
+          frontend_image="$(aws ssm get-parameter --name "/task-manager/${{ inputs.environment }}/ecs-frontend-image" --with-decryption --query Parameter.Value --output text)"
+          test -n "$backend_image"
+          test -n "$frontend_image"
+          echo "backend=$backend_image" >> "$GITHUB_OUTPUT"
+          echo "frontend=$frontend_image" >> "$GITHUB_OUTPUT"
       - name: Format check
         run: terraform fmt -check -recursive
       - name: Validate
