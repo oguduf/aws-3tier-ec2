@@ -26,6 +26,8 @@ jobs:
   terraform:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
+    env:
+      TF_VAR_domain_name: ${{ inputs.environment == 'dev' && vars.domain_name || '' }}
     defaults:
       run:
         working-directory: infra/ecs

@@ -28,6 +28,11 @@ output "auto_scaling_group_name" {
   value       = aws_autoscaling_group.app.name
 }
 
+output "website_url" {
+  description = "HTTPS address of the EC2 application when a Route 53 domain is configured"
+  value       = length(local.ec2_domain_name) > 0 ? "https://${local.ec2_domain_name}" : null
+}
+
 output "private_endpoints_security_group_id" {
   description = "Security group attached to the shared private AWS service endpoints"
   value       = aws_security_group.private_endpoints.id
