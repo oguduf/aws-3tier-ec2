@@ -25,8 +25,13 @@ variable "project_name" {
   default     = "aws-3tier-ecs"
 }
 
-variable "image_tag" {
-  description = "Immutable commit SHA tag built by the application workflow"
+variable "backend_image" {
+  description = "Immutable backend image URI retrieved by the ECS workflow"
+  type        = string
+}
+
+variable "frontend_image" {
+  description = "Immutable ECS frontend image URI retrieved by the ECS workflow"
   type        = string
 }
 

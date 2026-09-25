@@ -13,10 +13,6 @@ on:
         required: true
         type: choice
         options: [plan, apply, destroy]
-      image_tag:
-        description: Immutable commit SHA built by Build and Push Application Images
-        required: true
-        type: string
 
 permissions:
   contents: read
@@ -50,16 +46,21 @@ jobs:
             -backend-config="region=${{ vars.AWS_REGION }}" \
             -backend-config="encrypt=true" \
             -backend-config="use_lockfile=true"
+      - name: Read approved image versions
+        id: images
+        run: |
+          echo "backend=$(aws ssm get-parameter --name \"/task-manager/${{ inputs.environment }}/backend-image\" --with-decryption --query Parameter.Value --output text)" >> "$GITHUB_OUTPUT"
+          echo "frontend=$(aws ssm get-parameter --name \"/task-manager/${{ inputs.environment }}/ecs-frontend-image\" --with-decryption --query Parameter.Value --output text)" >> "$GITHUB_OUTPUT"
       - name: Format check
         run: terraform fmt -check -recursive
       - name: Validate
         run: terraform validate -no-color
       - name: Plan
         if: inputs.operation == 'plan'
-        run: terraform plan -no-color -input=false -var="state_bucket_name=${{ vars.TF_STATE_BUCKET }}" -var="certificate_arn=${{ vars.ACM_CERTIFICATE_ARN }}" -var="image_tag=${{ inputs.image_tag }}" -var-file="environments/${{ inputs.environment }}.tfvars"
+        run: terraform plan -no-color -input=false -var="state_bucket_name=${{ vars.TF_STATE_BUCKET }}" -var="certificate_arn=${{ vars.ACM_CERTIFICATE_ARN }}" -var="backend_image=${{ steps.images.outputs.backend }}" -var="frontend_image=${{ steps.images.outputs.frontend }}" -var-file="environments/${{ inputs.environment }}.tfvars"
       - name: Apply
         if: inputs.operation == 'apply'
-        run: terraform apply -auto-approve -input=false -var="state_bucket_name=${{ vars.TF_STATE_BUCKET }}" -var="certificate_arn=${{ vars.ACM_CERTIFICATE_ARN }}" -var="image_tag=${{ inputs.image_tag }}" -var-file="environments/${{ inputs.environment }}.tfvars"
+        run: terraform apply -auto-approve -input=false -var="state_bucket_name=${{ vars.TF_STATE_BUCKET }}" -var="certificate_arn=${{ vars.ACM_CERTIFICATE_ARN }}" -var="backend_image=${{ steps.images.outputs.backend }}" -var="frontend_image=${{ steps.images.outputs.frontend }}" -var-file="environments/${{ inputs.environment }}.tfvars"
       - name: Destroy
         if: inputs.operation == 'destroy'
-        run: terraform destroy -auto-approve -input=false -var="state_bucket_name=${{ vars.TF_STATE_BUCKET }}" -var="certificate_arn=${{ vars.ACM_CERTIFICATE_ARN }}" -var="image_tag=${{ inputs.image_tag }}" -var-file="environments/${{ inputs.environment }}.tfvars"
+        run: terraform destroy -auto-approve -input=false -var="state_bucket_name=${{ vars.TF_STATE_BUCKET }}" -var="certificate_arn=${{ vars.ACM_CERTIFICATE_ARN }}" -var="backend_image=${{ steps.images.outputs.backend }}" -var="frontend_image=${{ steps.images.outputs.frontend }}" -var-file="environments/${{ inputs.environment }}.tfvars"
