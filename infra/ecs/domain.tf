@@ -20,13 +20,17 @@ resource "aws_acm_certificate" "site" {
   }
 }
 
+locals {
+  certificate_validation_option = length(var.domain_name) > 0 ? one(aws_acm_certificate.site[0].domain_validation_options) : null
+}
+
 resource "aws_route53_record" "certificate_validation" {
   count = length(var.domain_name) > 0 ? 1 : 0
 
   zone_id = data.aws_route53_zone.site[0].zone_id
-  name    = aws_acm_certificate.site[0].domain_validation_options[0].resource_record_name
-  type    = aws_acm_certificate.site[0].domain_validation_options[0].resource_record_type
-  records = [aws_acm_certificate.site[0].domain_validation_options[0].resource_record_value]
+  name    = local.certificate_validation_option.resource_record_name
+  type    = local.certificate_validation_option.resource_record_type
+  records = [local.certificate_validation_option.resource_record_value]
   ttl     = 60
 }
 
