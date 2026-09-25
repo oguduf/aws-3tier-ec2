@@ -60,6 +60,17 @@ jobs:
           aws ssm put-parameter --name "/task-manager/${{ inputs.environment }}/backend-image" --type SecureString --value "${{ steps.login-ecr.outputs.registry }}/aws-3tier-ec2/${{ inputs.environment }}/backend:${{ github.sha }}" --overwrite
       - name: Refresh application servers
         run: |
+          refresh_status="$(aws autoscaling describe-instance-refreshes \
+            --auto-scaling-group-name "aws-3tier-ec2-${{ inputs.environment }}-app-asg" \
+            --max-records 1 \
+            --query 'InstanceRefreshes[0].Status' \
+            --output text)"
+
+          if [[ "$refresh_status" == "Pending" || "$refresh_status" == "InProgress" || "$refresh_status" == "Cancelling" ]]; then
+            echo "An instance refresh is already $refresh_status; images were published and this refresh will be skipped."
+            exit 0
+          fi
+
           aws autoscaling start-instance-refresh \
             --auto-scaling-group-name "aws-3tier-ec2-${{ inputs.environment }}-app-asg" \
             --strategy Rolling \
