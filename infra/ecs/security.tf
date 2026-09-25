@@ -51,6 +51,15 @@ resource "aws_vpc_security_group_ingress_rule" "task_from_alb" {
   to_port                      = 8080
 }
 
+resource "aws_vpc_security_group_egress_rule" "alb_to_task" {
+  security_group_id            = aws_security_group.alb.id
+  referenced_security_group_id = aws_security_group.task.id
+  description                  = "Frontend traffic to ECS tasks"
+  ip_protocol                  = "tcp"
+  from_port                    = 8080
+  to_port                      = 8080
+}
+
 resource "aws_vpc_security_group_egress_rule" "task_to_database" {
   security_group_id            = aws_security_group.task.id
   referenced_security_group_id = data.terraform_remote_state.application.outputs.database_security_group_id
