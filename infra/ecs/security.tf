@@ -60,6 +60,15 @@ resource "aws_vpc_security_group_egress_rule" "task_to_database" {
   to_port                      = 3306
 }
 
+resource "aws_vpc_security_group_ingress_rule" "database_from_task" {
+  security_group_id            = data.terraform_remote_state.application.outputs.database_security_group_id
+  referenced_security_group_id = aws_security_group.task.id
+  description                  = "MySQL from ECS application tasks"
+  ip_protocol                  = "tcp"
+  from_port                    = 3306
+  to_port                      = 3306
+}
+
 resource "aws_vpc_security_group_egress_rule" "task_to_endpoints" {
   security_group_id            = aws_security_group.task.id
   referenced_security_group_id = data.terraform_remote_state.application.outputs.private_endpoints_security_group_id
