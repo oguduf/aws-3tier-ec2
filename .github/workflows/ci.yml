@@ -59,3 +59,7 @@ jobs:
         run: |
           terraform -chdir=infra/application init -backend=false -input=false
           terraform -chdir=infra/application validate -no-color
+      - name: Validate ECS Terraform
+        run: |
+          terraform -chdir=infra/ecs init -backend=false -input=false
+          terraform -chdir=infra/ecs validate -no-color

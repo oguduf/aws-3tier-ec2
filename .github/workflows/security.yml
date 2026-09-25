@@ -63,6 +63,20 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: 1
+      - name: Build ECS frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./app/frontend
+          file: ./app/frontend/Dockerfile.ecs
+          load: true
+          tags: task-manager-frontend-ecs:security
+      - name: Scan ECS frontend image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: task-manager-frontend-ecs:security
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: 1
       - name: Build backend production image
         uses: docker/build-push-action@v6
         with:
