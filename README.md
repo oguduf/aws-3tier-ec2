@@ -59,9 +59,13 @@ Create these repository variables under **Settings -> Secrets and variables -> A
 | Variable | Example | Purpose |
 | --- | --- | --- |
 | `AWS_REGION` | `us-east-2` | Region used by every workflow |
-| `AWS_ROLE_ARN` | `arn:aws:iam::123456789012:role/GitHubActionsRole` | One AWS OIDC deployment role |
+| `AWS_ROLE_ARN` | `arn:aws:iam::866934333672:role/cloudbatch818-omer-github-action-tf` | AWS OIDC deployment role assumed by GitHub Actions |
+| `DOMAIN_NAME` | `omergroup.click` | Route 53 hosted domain; the ECS site uses the apex domain and the EC2 site uses `ec2.<domain>` |
+| `TF_STATE_BUCKET` | `cloudbatch818-omer-3tier-state` | S3 bucket containing the remote Terraform state files |
 
-`TF_STATE_BUCKET` is created automatically after the bootstrap workflow applies successfully.
+Create the Terraform state bucket with the bootstrap workflow before adding its name as
+`TF_STATE_BUCKET`. Do not store AWS access keys, passwords, or other credentials as
+repository variables.
 
 Create GitHub environments named `dev`, `test`, and `production`. Add required reviewers to `production` so production jobs pause for approval.
 
