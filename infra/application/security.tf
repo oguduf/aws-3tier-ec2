@@ -43,6 +43,11 @@ resource "aws_security_group_rule" "alb_http" {
   cidr_blocks       = ["0.0.0.0/0"]
 }
 
+import {
+  to = aws_security_group_rule.alb_http
+  id = "${aws_security_group.alb.id}_ingress_tcp_80_80_0.0.0.0/0"
+}
+
 resource "aws_security_group_rule" "alb_https" {
   count             = var.enable_https ? 1 : 0
   type              = "ingress"
@@ -82,6 +87,11 @@ resource "aws_security_group_rule" "app_to_private_endpoints_egress" {
   protocol                 = "tcp"
   security_group_id        = aws_security_group.app.id
   source_security_group_id = aws_security_group.private_endpoints.id
+}
+
+import {
+  to = aws_security_group_rule.app_to_private_endpoints_egress
+  id = "${aws_security_group.app.id}_egress_tcp_443_443_${aws_security_group.private_endpoints.id}"
 }
 
 resource "aws_security_group" "private_endpoints" {
@@ -134,5 +144,10 @@ resource "aws_security_group_rule" "database_from_app" {
   protocol                 = "tcp"
   security_group_id        = aws_security_group.database.id
   source_security_group_id = aws_security_group.app.id
+}
+
+import {
+  to = aws_security_group_rule.database_from_app
+  id = "${aws_security_group.database.id}_ingress_tcp_3306_3306_${aws_security_group.app.id}"
 }
 
